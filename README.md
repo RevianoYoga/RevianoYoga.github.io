@@ -4,95 +4,123 @@
 
 <head>
 
-  <title>Tap Cookie Game</title>
+  <title>Multiplayer Shooter Game</title>
 
   <style>
 
-    button {
+    canvas {
 
-      padding: 10px 20px;
-
-      font-size: 20px;
-
-      margin-top: 10px;
+      border: 1px solid black;
 
     }
 
   </style>
 
+  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app.js"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database.js"></script>
+
 </head>
 
 <body>
 
-  <h1>Tap Cookie Game</h1>
-
-  <p>Click the cookie to earn points!</p>
-
-  <button id="cookieButton" onclick="updateScore()">Tap Me!</button>
-
-  <p id="score">Score: 0</p>
-
-  <h2>Leaderboard</h2>
-
-  <ol id="leaderboard"></ol>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
 
   <script>
 
-    // Mendapatkan data dari local storage atau membuat data baru jika belum ada
+    // Inisialisasi Firebase
 
-    var playerData = JSON.parse(localStorage.getItem('playerData')) || {};
+    const firebaseConfig = {
 
-    // Mengupdate skor pada tampilan dan data pemain
+      apiKey: "YOUR_API_KEY",
 
-    function updateScore() {
+      authDomain: "YOUR_AUTH_DOMAIN",
 
-      var currentScore = parseInt(playerData['score']) || 0;
+      projectId: "YOUR_PROJECT_ID",
 
-      var newScore = currentScore + 1;
+      databaseURL: "YOUR_DATABASE_URL",
 
-      document.getElementById('score').textContent = 'Score: ' + newScore;
+    };
 
-      playerData['score'] = newScore;
+    
 
-      localStorage.setItem('playerData', JSON.stringify(playerData));
+    firebase.initializeApp(firebaseConfig);
 
-      updateLeaderboard();
+    const database = firebase.database();
 
-    }
+    // Inisialisasi Game Canvas
 
-    // Memperbarui leaderboard pada tampilan
+    const canvas = document.getElementById("gameCanvas");
 
-    function updateLeaderboard() {
+    const context = canvas.getContext("2d");
 
-      var leaderboard = document.getElementById('leaderboard');
+    // Menggambar pemain di canvas
 
-      leaderboard.innerHTML = '';
+    function drawPlayer(x, y) {
 
-      // Mengurutkan skor secara menurun
+      context.fillStyle = "red";
 
-      var sortedScores = Object.keys(playerData).sort(function(a, b) {
-
-        return playerData[b] - playerData[a];
-
-      });
-
-      // Menambahkan pemain dengan skor tertinggi ke leaderboard
-
-      sortedScores.forEach(function(score) {
-
-        var listItem = document.createElement('li');
-
-        listItem.textContent = 'Score: ' + playerData[score];
-
-        leaderboard.appendChild(listItem);
-
-      });
+      context.fillRect(x, y, 20, 20);
 
     }
 
-    // Memperbarui leaderboard saat halaman dimuat
+    // Mendapatkan posisi pemain dari Firebase dan menggambar ulang canvas
 
-    updateLeaderboard();
+    function updateGame() {
+
+      database.ref("players").once("value").then((snapshot) => {
+
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        snapshot.forEach((playerSnapshot) => {
+
+          const player = playerSnapshot.val();
+
+          drawPlayer(player.x, player.y);
+
+        });
+
+      });
+
+    }
+
+    // Mengirim posisi pemain ke Firebase
+
+    function sendPosition(x, y) {
+
+      const playerRef = database.ref("players/player1");
+
+      playerRef.set({
+
+        x: x,
+
+        y: y
+
+      });
+
+    }
+
+    // Menggerakkan pemain
+
+    function movePlayer(event) {
+
+      const canvasRect = canvas.getBoundingClientRect();
+
+      const mouseX = event.clientX - canvasRect.left;
+
+      const mouseY = event.clientY - canvasRect.top;
+
+      sendPosition(mouseX, mouseY);
+
+    }
+
+    // Menghubungkan event mousemove ke fungsi movePlayer
+
+    canvas.addEventListener("mousemove", movePlayer);
+
+    // Mengupdate game secara periodik
+
+    setInterval(updateGame, 100);
 
   </script>
 
