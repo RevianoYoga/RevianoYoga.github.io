@@ -26,6 +26,18 @@
 
     }
 
+    #msDisplay {
+
+      position: fixed;
+
+      top: 10px;
+
+      right: 10px;
+
+      font-size: 14px;
+
+    }
+
   </style>
 
   <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-app.js"></script>
@@ -44,19 +56,19 @@
 
     <input type="text" id="usernameInput" placeholder="Username">
 
-    <div id="loginButton" onclick="login()"></div>
+    <button id="guestButton" onclick="loginAsGuest()">Login as Guest</button>
 
   </div>
 
   <div id="gamePage" style="display: none;">
 
-    <h1>Welcome <span id="username"></span>!</h1>
+    <h1>Welcome, <span id="username"></span>!</h1>
 
     <h2>Score: <span id="score">0</span></h2>
 
     <canvas id="canvas"></canvas>
 
-    <h2>Ping: <span id="ping">-</span> ms</h2>
+    <div id="msDisplay">Ping: <span id="ping">-</span> ms</div>
 
     <h2>Leaderboard</h2>
 
@@ -89,8 +101,6 @@
     // Initialize Firebase
 
     firebase.initializeApp(firebaseConfig);
-
-    var auth = firebase.auth();
 
     var database = firebase.database();
 
@@ -142,31 +152,65 @@
 
     });
 
-    function login() {
+    function loginAsGuest() {
 
-      var username = usernameInput.value;
+      var username = usernameInput.value.trim();
 
-      if (username.trim() === '') {
+      if (username === '') {
 
-        alert('Please enter your username.');
+        alert('Please enter a username.');
 
         return;
 
       }
 
-      // Set username
+      firebase.auth().signInAnonymously()
+
+        .then(function(userCredential) {
+
+          var user = userCredential.user;
+
+          user.updateProfile({
+
+            displayName: username
+
+          }).then(function() {
+
+            showGamePage(user.displayName);
+
+          }).catch(function(error) {
+
+            console.log(error);
+
+          });
+
+        })
+
+        .catch(function(error) {
+
+          console.log(error);
+
+        });
+
+    }
+
+    function showLoginPage() {
+
+      loginPage.style.display = 'block';
+
+      gamePage.style.display = 'none';
+
+    }
+
+    function showGamePage(username) {
 
       usernameDisplay.textContent = username;
-
-      // Show game page and hide login page
 
       loginPage.style.display = 'none';
 
       gamePage.style.display = 'block';
 
-      // Update leaderboard data from Firebase and update the view
-
-      leaderboardRef.on('value', function(snapshot) {
+      leaderboardRef.orderByChild('score').limitToLast(10).on('value', function(snapshot) {
 
         var leaderboard = snapshot.val();
 
@@ -174,33 +218,45 @@
 
       });
 
-      // Start the game
-
       startGame();
 
     }
 
     function startGame() {
 
-      // Implement game logic here
+      canvas.addEventListener('click', function() {
+
+        if (!document.body.classList.contains('game-over')) {
+
+          score++;
+
+          scoreDisplay.textContent = score;
+
+          clickCount++;
+
+          updateClickCount(clickCount);
+
+        }
+
+      });
+
+    }
+
+    function updateClickCount(clickCount) {
+
+      firebase.database().ref('clickCount').set(clickCount);
 
     }
 
     function updateLeaderboard(leaderboard) {
 
-      // Clear leaderboard
-
       leaderboardElement.innerHTML = '';
-
-      // Sort leaderboard by score
 
       var sortedLeaderboard = Object.entries(leaderboard).sort(function(a, b) {
 
         return b[1].score - a[1].score;
 
       });
-
-      // Update leaderboard view
 
       sortedLeaderboard.forEach(function(entry) {
 
@@ -223,5 +279,3 @@
 </body>
 
 </html>
-
-
