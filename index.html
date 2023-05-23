@@ -14,15 +14,9 @@
 
     }
 
-    #loginButton {
+    #registerForm {
 
-      background-image: url('login-button.jpg');
-
-      width: 150px;
-
-      height: 50px;
-
-      cursor: pointer;
+      display: block;
 
     }
 
@@ -38,43 +32,29 @@
 
     }
 
+    #leaderboard {
+
+      margin-top: 20px;
+
+      padding: 0;
+
+      list-style: none;
+
+    }
+
+    #leaderboard li {
+
+      margin-bottom: 10px;
+
+    }
+
   </style>
 
   <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-app.js"></script>
 
-  <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-database.js"></script>
-
   <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-auth.js"></script>
 
-</head>
-
-<body>
-
-  <div id="loginPage">
-
-    <h1>Login</h1>
-
-    <input type="text" id="usernameInput" placeholder="Username">
-
-    <button id="guestButton" onclick="loginAsGuest()">Login as Guest</button>
-
-  </div>
-
-  <div id="gamePage" style="display: none;">
-
-    <h1>Welcome, <span id="username"></span>!</h1>
-
-    <h2>Score: <span id="score">0</span></h2>
-
-    <canvas id="canvas"></canvas>
-
-    <div id="msDisplay">Ping: <span id="ping">-</span> ms</div>
-
-    <h2>Leaderboard</h2>
-
-    <ol id="leaderboard"></ol>
-
-  </div>
+  <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-database.js"></script>
 
   <script>
 
@@ -108,174 +88,167 @@
 
     var leaderboardRef = database.ref('leaderboard');
 
+    // Check if user is logged in
+
+    var isLoggedIn = false;
+
     // Get DOM elements
 
-    var loginPage = document.getElementById('loginPage');
+    var registerForm = document.getElementById('registerForm');
 
-    var gamePage = document.getElementById('gamePage');
+    var usernameInput = document.getElementById('username');
 
-    var canvas = document.getElementById('canvas');
+    var emailInput = document.getElementById('email');
 
-    var scoreDisplay = document.getElementById('score');
-
-    var usernameInput = document.getElementById('usernameInput');
+    var passwordInput = document.getElementById('password');
 
     var usernameDisplay = document.getElementById('username');
 
-    var pingDisplay = document.getElementById('ping');
+    var scoreDisplay = document.getElementById('score');
 
-    var leaderboardElement = document.getElementById('leaderboard');
+    // Register user
 
-    // Initialize score and click count
+    function register() {
 
-    var score = 0;
+      var username = usernameInput.value;
 
-    var clickCount = 0;
+      var email = emailInput.value;
 
-    // Check authentication status when the page is loaded
+      var password = passwordInput.value;
 
-    firebase.auth().onAuthStateChanged(function(user) {
-
-      if (user) {
-
-        // User is already logged in
-
-        showGamePage(user.displayName);
-
-      } else {
-
-        // User is not logged in
-
-        showLoginPage();
-
-      }
-
-    });
-
-    function loginAsGuest() {
-
-      var username = usernameInput.value.trim();
-
-      if (username === '') {
-
-        alert('Please enter a username.');
-
-        return;
-
-      }
-
-      firebase.auth().signInAnonymously()
+      firebase.auth().createUserWithEmailAndPassword(email, password)
 
         .then(function(userCredential) {
 
-          var user = userCredential.user;
+          // Save username to database
 
-          user.updateProfile({
+          var userId = userCredential.user.uid;
 
-            displayName: username
+          database.ref('users/' + userId).set({
+
+            username: username
 
           }).then(function() {
 
-            showGamePage(user.displayName);
+            // Set current user data
+
+            isLoggedIn = true;
+
+            usernameDisplay.textContent = username;
+
+            // Hide register form
+
+            registerForm.style.display = "none";
+
+            // Show game page
+
+            gamePage.style.display = "block";
 
           }).catch(function(error) {
 
-            console.log(error);
+            console.error("Error saving username:", error);
 
           });
 
-        })
+        }).catch(function(error) {
 
-        .catch(function(error) {
-
-          console.log(error);
+          console.error("Error creating user:", error);
 
         });
 
     }
 
-    function showLoginPage() {
+    // Handle user authentication state changes
 
-      loginPage.style.display = 'block';
+    firebase.auth().onAuthStateChanged(function(user) {
 
-      gamePage.style.display = 'none';
+      if (user) {
 
-    }
+        // User is logged in
 
-    function showGamePage(username) {
+        isLoggedIn = true;
 
-      usernameDisplay.textContent = username;
+        var userId = user.uid;
 
-      loginPage.style.display = 'none';
+        // Fetch username from database
 
-      gamePage.style.display = 'block';
+        database.ref('users/' + userId).once('value', function(snapshot) {
 
-      leaderboardRef.orderByChild('score').limitToLast(10).on('value', function(snapshot) {
+          var userData = snapshot.val();
 
-        var leaderboard = snapshot.val();
+          var username = userData.username;
 
-        updateLeaderboard(leaderboard);
+          usernameDisplay.textContent = username;
 
-      });
+          // Hide register form
 
-      startGame();
+          registerForm.style.display = "none";
 
-    }
+          // Show game page
 
-    function startGame() {
+          gamePage.style.display = "block";
 
-      canvas.addEventListener('click', function() {
+        });
 
-        if (!document.body.classList.contains('game-over')) {
+      } else {
 
-          score++;
+        // User is logged out
 
-          scoreDisplay.textContent = score;
+        isLoggedIn = false;
 
-          clickCount++;
+        // Show register form
 
-          updateClickCount(clickCount);
+        registerForm.style.display = "block";
 
-        }
+        // Hide game page
 
-      });
+        gamePage.style.display = "none";
 
-    }
+      }
 
-    function updateClickCount(clickCount) {
+    });
 
-      firebase.database().ref('clickCount').set(clickCount);
+    // TODO: Implement game logic and leaderboard functionality
 
-    }
-
-    function updateLeaderboard(leaderboard) {
-
-      leaderboardElement.innerHTML = '';
-
-      var sortedLeaderboard = Object.entries(leaderboard).sort(function(a, b) {
-
-        return b[1].score - a[1].score;
-
-      });
-
-      sortedLeaderboard.forEach(function(entry) {
-
-        var username = entry[0];
-
-        var score = entry[1].score;
-
-        var leaderboardItem = document.createElement('li');
-
-        leaderboardItem.textContent = username + ': ' + score;
-
-        leaderboardElement.appendChild(leaderboardItem);
-
-      });
-
-    }
+    // TODO: Implement cookie click functionality and real-time database update
 
   </script>
+
+</head>
+
+<body>
+
+  <div id="registerForm">
+
+    <h2>Register</h2>
+
+    <label for="username">Username:</label>
+
+    <input type="text" id="username" required><br>
+
+    <label for="email">Email:</label>
+
+    <input type="email" id="email" required><br>
+
+    <label for="password">Password:</label>
+
+    <input type="password" id="password" required><br>
+
+    <button onclick="register()">Register</button>
+
+  </div>
+
+  <div id="gamePage" style="display: none;">
+
+    <h2>Welcome, <span id="username"></span>!</h2>
+
+    <!-- TODO: Add game canvas and cookie click functionality -->
+
+  </div>
 
 </body>
 
 </html>
+
+
+          
