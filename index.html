@@ -8,23 +8,15 @@
 
   <style>
 
-    #cookie {
+    canvas {
 
-      width: 200px;
-
-      height: 200px;
-
-      background-image: url('cookie.png');
-
-      background-size: cover;
-
-      cursor: pointer;
+      border: 1px solid black;
 
     }
 
     #loginButton {
 
-      background-image: url('login-button.png');
+      background-image: url('login-button.jpg');
 
       width: 150px;
 
@@ -62,7 +54,9 @@
 
     <h2>Score: <span id="score">0</span></h2>
 
-    <div id="cookie"></div>
+    <canvas id="canvas"></canvas>
+
+    <h2>Ping: <span id="ping">-</span> ms</h2>
 
     <h2>Leaderboard</h2>
 
@@ -72,7 +66,7 @@
 
   <script>
 
-    // Konfigurasi Firebase
+    // Firebase Config
 
     var firebaseConfig = {
 
@@ -92,7 +86,7 @@
 
     };
 
-    // Inisialisasi Firebase
+    // Initialize Firebase
 
     firebase.initializeApp(firebaseConfig);
 
@@ -100,17 +94,17 @@
 
     var database = firebase.database();
 
-    // Mendapatkan referensi leaderboard
+    // Get leaderboard reference
 
     var leaderboardRef = database.ref('leaderboard');
 
-    // Mendapatkan elemen-elemen dari DOM
+    // Get DOM elements
 
     var loginPage = document.getElementById('loginPage');
 
     var gamePage = document.getElementById('gamePage');
 
-    var cookie = document.getElementById('cookie');
+    var canvas = document.getElementById('canvas');
 
     var scoreDisplay = document.getElementById('score');
 
@@ -118,25 +112,29 @@
 
     var usernameDisplay = document.getElementById('username');
 
-    // Inisialisasi skor dan penghitung klik
+    var pingDisplay = document.getElementById('ping');
+
+    var leaderboardElement = document.getElementById('leaderboard');
+
+    // Initialize score and click count
 
     var score = 0;
 
     var clickCount = 0;
 
-    // Cek status autentikasi saat halaman dimuat
+    // Check authentication status when the page is loaded
 
     firebase.auth().onAuthStateChanged(function(user) {
 
       if (user) {
 
-        // User sudah login
+        // User is already logged in
 
         showGamePage(user.displayName);
 
       } else {
 
-        // User belum login
+        // User is not logged in
 
         showLoginPage();
 
@@ -160,23 +158,13 @@
 
       usernameDisplay.textContent = username;
 
-      // Tampilkan halaman permainan dan sembunyikan halaman login
+      // Show game page and hide login page
 
       loginPage.style.display = 'none';
 
       gamePage.style.display = 'block';
 
-      // Menambahkan event listener untuk klik pada cookie
-
-      cookie.addEventListener('click', function() {
-
-        score++;
-
-        scoreDisplay.textContent = score.toString();
-
-      });
-
-      // Mendapatkan data leaderboard dari Firebase dan memperbarui tampilan
+      // Update leaderboard data from Firebase and update the view
 
       leaderboardRef.on('value', function(snapshot) {
 
@@ -186,61 +174,47 @@
 
       });
 
+      // Start the game
+
+      startGame();
+
+    }
+
+    function startGame() {
+
+      // Implement game logic here
+
     }
 
     function updateLeaderboard(leaderboard) {
 
-      // Menghapus entri leaderboard yang sebelumnya ditampilkan
-
-      var leaderboardElement = document.getElementById('leaderboard');
+      // Clear leaderboard
 
       leaderboardElement.innerHTML = '';
 
-      // Mengurutkan leaderboard berdasarkan skor secara menurun
+      // Sort leaderboard by score
 
-      var sortedLeaderboard = Object.entries(leaderboard).sort((a, b) => b[1] - a[1]);
+      var sortedLeaderboard = Object.entries(leaderboard).sort(function(a, b) {
 
-      // Memperbarui tampilan leaderboard
-
-      sortedLeaderboard.forEach(function(entry, index) {
-
-        var username = entry[0];
-
-        var score = entry[1];
-
-        var listItem = document.createElement('li');
-
-        listItem.textContent = username + ': ' + score;
-
-        leaderboardElement.appendChild(listItem);
-
-        // Jika pemain saat ini adalah pemain dengan skor tertinggi, berikan penanda
-
-        if (index === 0 && username === usernameDisplay.textContent) {
-
-          listItem.style.fontWeight = 'bold';
-
-        }
+        return b[1].score - a[1].score;
 
       });
 
-    }
+      // Update leaderboard view
 
-    function showLoginPage() {
+      sortedLeaderboard.forEach(function(entry) {
 
-      loginPage.style.display = 'block';
+        var username = entry[0];
 
-      gamePage.style.display = 'none';
+        var score = entry[1].score;
 
-    }
+        var leaderboardItem = document.createElement('li');
 
-    function showGamePage(username) {
+        leaderboardItem.textContent = username + ': ' + score;
 
-      usernameDisplay.textContent = username;
+        leaderboardElement.appendChild(leaderboardItem);
 
-      loginPage.style.display = 'none';
-
-      gamePage.style.display = 'block';
+      });
 
     }
 
@@ -249,3 +223,5 @@
 </body>
 
 </html>
+
+
